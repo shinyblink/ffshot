@@ -47,7 +47,7 @@ static uint32_t win;
 
 static uint16_t pos_x, pos_y;
 static uint16_t width, height;
-static unsigned char buf[16];
+static unsigned char buf[9];
 
 static xcb_get_geometry_cookie_t gc;
 static xcb_get_geometry_reply_t* gr;
@@ -125,6 +125,11 @@ int main(int argc, char* argv[]) {
 		errx(2, "Failed to get Image data");
 	uint32_t bpp = ir->depth;
 
+	// allocate buffer.
+	uint16_t* img = malloc(width * height * 8);
+	if (!img)
+		errx(2, "Failed to allocate buffer.");
+
 	// Output image header
 	bwrite(&("farbfeld"), 8);
 	*(uint32_t*)buf = htobe32(width);
@@ -144,7 +149,6 @@ int main(int argc, char* argv[]) {
 
 	unsigned int end = width * height;
 	unsigned short r, g, b;
-	uint16_t* px = (uint16_t*) buf;
 	uint32_t i;
 	for (i=0; i < end; i++) {
 		// write out pixel
@@ -154,13 +158,15 @@ int main(int argc, char* argv[]) {
 		g = data[p + 1] << 8;
 		b = data[p + 0] << 8;
 
-		px[0] = htobe16(r);
-		px[1] = htobe16(g);
-		px[2] = htobe16(b);
-		px[3] = hasa ? htobe16(data[p + 0] * 2) : 0xFFFF;
-		bwrite(buf, 8);
+		img[p + 0] = htobe16(r);
+		img[p + 1] = htobe16(g);
+		img[p + 2] = htobe16(b);
+		img[p + 3] = hasa ? htobe16(data[p + 0] * 2) : 0xFFFF;
 	}
 
+	bwrite((unsigned char*) img, width * height * 8);
+
+	free(img);
 	free(ir);
 
 	/*
