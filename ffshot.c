@@ -10,11 +10,7 @@
 #include <stdlib.h>
 #include <inttypes.h>
 #include <xcb/xcb.h>
-//#include <xcb/xcb_aux.h>
-#include <xcb/shm.h>
 #include <xcb/xcb_image.h>
-//#include <sys/ipc.h>
-//#include <sys/shm.h>
 #include <errno.h>
 #include <err.h>
 
@@ -53,10 +49,6 @@ static xcb_get_geometry_cookie_t gc;
 static xcb_get_geometry_reply_t* gr;
 static xcb_get_image_cookie_t ic;
 static xcb_get_image_reply_t* ir;
-#if 0
-static xcb_shm_query_version_reply_t* shmr;
-static xcb_shm_segment_info_t shmi;
-#endif
 
 int main(int argc, char* argv[]) {
 	if (!(argc == 1 || argc == 2)) { // one arg max
@@ -64,10 +56,8 @@ int main(int argc, char* argv[]) {
 		return 1;
 	}
 
-	if (argc == 2) {
+	if (argc == 2)
 		win = (uint32_t) strtoumax(argv[1], (char* *) NULL, 0);
-		fprintf(stderr, "win %u\n", win);
-	}
 
 	con = xcb_connect(NULL, NULL);
 	if (xcb_connection_has_error(con))
@@ -98,29 +88,13 @@ int main(int argc, char* argv[]) {
 	free(gr);
 
 	// Get image from the X server. Yuck.
-#if 0
-	shmr = xcb_shm_query_version_reply(con, xcb_shm_query_version(con), NULL);
-	if(!shmr || !shmr->shared_pixmaps)
-		errx(2, "SHM error");
-
-	shmi.shmid = shmget(IPC_PRIVATE, width*height*4, IPC_CREAT | 0600);
-	shmi.shmaddr = shmat(shmi.shmid, 0, 0);
-	shmi.shmseg = xcb_generate_id(con);
-	xcb_shm_attach(con, shmi.shmseg, shmi.shmid, ~0);
-
-	ic = xcb_shm_get_image(con, win, pos_x, pos_y, width, height, ~0, XCB_IMAGE_FORMAT_Z_PIXMAP, shmi.shmseg, 0);
-	ir = xcb_shm_get_image_reply(con, ic, NULL);
-	if (!ir)
-		errx(2, "Failed to get Image");
-	unsigned char* data = shmi.shmaddr;
-#else
 	fprintf(stderr, "%08x: %ux%u to %ux%u\n", win, pos_x, pos_y, width, height);
 	ic = xcb_get_image(con, XCB_IMAGE_FORMAT_Z_PIXMAP, win, pos_x, pos_y, width, height, ~0);
 	ir = xcb_get_image_reply(con, ic, NULL);
 	if (!ir)
 		errx(2, "Failed to get Image");
+
 	unsigned char* data = xcb_get_image_data(ir);
-#endif
 	if (!data)
 		errx(2, "Failed to get Image data");
 	uint32_t bpp = ir->depth;
@@ -131,7 +105,7 @@ int main(int argc, char* argv[]) {
 		errx(2, "Failed to allocate buffer.");
 
 	// Output image header
-	bwrite(&("farbfeld"), 8);
+	bwrite((unsigned char*)("farbfeld"), 8);
 	*(uint32_t*)buf = htobe32(width);
 	*(uint32_t*)(buf + 4) = htobe32(height);
 	bwrite(buf, 8);
@@ -168,12 +142,6 @@ int main(int argc, char* argv[]) {
 
 	free(img);
 	free(ir);
-
-	/*
-	shmctl(shmi.shmid, IPC_RMID, 0);
-	xcb_shm_detach(con, shmi.shmseg);
-	shmdt(shmi.shmaddr);
-	*/
 
 	xcb_disconnect(con);
 	return 0;
