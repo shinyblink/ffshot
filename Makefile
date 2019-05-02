@@ -1,7 +1,7 @@
 CC ?= cc
 CFLAGS ?= -Os
 CPPFLAGS += -pedantic -Wall -Wextra
-LDFLAGS += -lxcb -lxcb-image -lxcb-shm
+LDFLAGS += -lxcb -lxcb-image
 
 PREFIX ?= /usr/local
 DESTDIR ?= /
@@ -15,10 +15,11 @@ ffshot: ffshot.c
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) -o ffshot $^
 
 install: $(BINS)
+	install -d $(DESTDIR)/$(PREFIX)/bin
 	install $(BINS) $(DESTDIR)/$(PREFIX)/bin
 
 uninstall:
-	cd $(DESTDIR)/$(PREFIX)/bin && rm $(BINS)
+	rm -f $(DESTDIR)/$(PREFIX)/$(BINS)
 
 clean:
 	rm -f $(BINS)
