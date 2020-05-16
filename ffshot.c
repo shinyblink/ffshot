@@ -79,7 +79,7 @@ int main(int argc, char* argv[]) {
 	gc = xcb_get_geometry(con, win);
 	gr = xcb_get_geometry_reply(con, gc, NULL);
 	if (!gr)
-		errx(1, "0x%08x: no such window");
+		errx(1, "0x%08x: no such window", win);
 
 	pos_x = gr->x;
 	pos_y = gr->y;
@@ -94,10 +94,25 @@ int main(int argc, char* argv[]) {
 	if (!ir)
 		errx(2, "Failed to get Image");
 
-	unsigned char* data = xcb_get_image_data(ir);
+	uint32_t* data = (uint32_t*) xcb_get_image_data(ir);
 	if (!data)
 		errx(2, "Failed to get Image data");
 	uint32_t bpp = ir->depth;
+
+	unsigned int hasa = 1;
+	unsigned int bpc = 8;
+	switch (bpp) {
+	case 24:
+		hasa = 0;
+		break;
+	case 30:
+		bpc = 10;
+		hasa = 0;
+	case 32:
+		break;
+	default:
+		errx(2, "No support for bit depths other than 24/30/32 bit: bit depth %i. Fix me?", bpp);
+	}
 
 	// allocate buffer.
 	uint16_t* img = malloc(width * height * 8);
@@ -110,32 +125,23 @@ int main(int argc, char* argv[]) {
 	*(uint32_t*)(buf + 4) = htobe32(height);
 	bwrite(buf, 8);
 
-	unsigned int hasa = 1;
-
-	switch (bpp) {
-	case 24:
-		hasa = 0;
-	case 32:
-		break;
-	default:
-		errx(2, "No support for bit depths other than 24/32 bit: bit depth %i. Fix me?", bpp);
-	}
-
-	unsigned int end = width * height;
-	unsigned short r, g, b;
+	size_t end = width * height;
+	uint16_t r, g, b;
 	uint32_t i;
+	uint32_t mask = (2 << (bpc - 1)) - 1;
+	unsigned char scale = 16 - bpc;
 	for (i=0; i < end; i++) {
 		// write out pixel
-		size_t p = i * 4;
 		// BGRA? thanks Xorg.
-		r = data[p + 2] << 8;
-		g = data[p + 1] << 8;
-		b = data[p + 0] << 8;
+		b = (data[i] >> (0*bpc)) & mask;
+		g = (data[i] >> (1*bpc)) & mask;
+		r = (data[i] >> (2*bpc)) & mask;
 
-		img[p + 0] = htobe16(r);
-		img[p + 1] = htobe16(g);
-		img[p + 2] = htobe16(b);
-		img[p + 3] = hasa ? htobe16(data[p + 0] * 2) : 0xFFFF;
+		uint32_t p = i * 4;
+		img[p + 0] = htobe16(r << scale);
+		img[p + 1] = htobe16(g << scale);
+		img[p + 2] = htobe16(b << scale);
+		img[p + 3] = hasa ? htobe16((data[i] & mask) << scale ) : 0xFFFF;
 	}
 
 	bwrite((unsigned char*) img, width * height * 8);
