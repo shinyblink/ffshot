@@ -81,7 +81,7 @@ int main(int argc, char* argv[]) {
 	free(gr);
 
 	// Get image from the X server. Yuck.
-	fprintf(stderr, "%08x to %ux%u\n", win, width, height);
+	fprintf(stderr, "%08x: %ux%u\n", win, width, height);
 	ic = xcb_get_image(con, XCB_IMAGE_FORMAT_Z_PIXMAP, win, 0, 0, width, height, ~0);
 	ir = xcb_get_image_reply(con, ic, NULL);
 	if (!ir)
