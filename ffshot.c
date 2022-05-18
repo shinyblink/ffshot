@@ -5,13 +5,9 @@
 // Made by vifino. ISC (C) vifino 2018
 
 #include <stdio.h>
-#include <string.h>
-#include <stdint.h>
 #include <stdlib.h>
 #include <inttypes.h>
-#include <xcb/xcb.h>
 #include <xcb/xcb_image.h>
-#include <errno.h>
 #include <err.h>
 
 // I know, I know, not standardized.
@@ -41,7 +37,6 @@ static xcb_connection_t* con;
 static xcb_screen_t* scr;
 static uint32_t win;
 
-static uint16_t pos_x, pos_y;
 static uint16_t width, height;
 static unsigned char buf[9];
 
@@ -81,15 +76,13 @@ int main(int argc, char* argv[]) {
 	if (!gr)
 		errx(1, "0x%08x: no such window", win);
 
-	pos_x = gr->x;
-	pos_y = gr->y;
 	width = gr->width;
 	height = gr->height;
 	free(gr);
 
 	// Get image from the X server. Yuck.
-	fprintf(stderr, "%08x: %ux%u to %ux%u\n", win, pos_x, pos_y, width, height);
-	ic = xcb_get_image(con, XCB_IMAGE_FORMAT_Z_PIXMAP, win, pos_x, pos_y, width, height, ~0);
+	fprintf(stderr, "%08x to %ux%u\n", win, width, height);
+	ic = xcb_get_image(con, XCB_IMAGE_FORMAT_Z_PIXMAP, win, 0, 0, width, height, ~0);
 	ir = xcb_get_image_reply(con, ic, NULL);
 	if (!ir)
 		errx(2, "Failed to get Image");
@@ -126,7 +119,7 @@ int main(int argc, char* argv[]) {
 	bwrite(buf, 8);
 
 	size_t end = width * height;
-	uint16_t r, g, b;
+	uint16_t r, g, b, a;
 	uint32_t i;
 	uint32_t mask = (2 << (bpc - 1)) - 1;
 	uint32_t scale = (1 << (16 - bpc)) + 1;
@@ -136,12 +129,13 @@ int main(int argc, char* argv[]) {
 		b = (data[i] >> (0*bpc)) & mask;
 		g = (data[i] >> (1*bpc)) & mask;
 		r = (data[i] >> (2*bpc)) & mask;
+		a = (data[i] >> (3*bpc)) & mask;
 
 		uint32_t p = i * 4;
 		img[p + 0] = htobe16(r * scale);
 		img[p + 1] = htobe16(g * scale);
 		img[p + 2] = htobe16(b * scale);
-		img[p + 3] = hasa ? htobe16((data[i] & mask) * scale) : 0xFFFF;
+		img[p + 3] = hasa ? htobe16(a * scale) : 0xFFFF;
 	}
 
 	bwrite((unsigned char*) img, width * height * 8);
