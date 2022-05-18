@@ -13,6 +13,7 @@
 #include <xcb/xcb_image.h>
 #include <errno.h>
 #include <err.h>
+#include <math.h>
 
 // I know, I know, not standardized.
 // But painless fallback.
@@ -129,7 +130,7 @@ int main(int argc, char* argv[]) {
 	uint16_t r, g, b;
 	uint32_t i;
 	uint32_t mask = (2 << (bpc - 1)) - 1;
-	unsigned char scale = 16 - bpc;
+	uint32_t scale = pow(2, (16 - bpc)) + 1;
 	for (i=0; i < end; i++) {
 		// write out pixel
 		// BGRA? thanks Xorg.
@@ -138,10 +139,10 @@ int main(int argc, char* argv[]) {
 		r = (data[i] >> (2*bpc)) & mask;
 
 		uint32_t p = i * 4;
-		img[p + 0] = htobe16(r << scale);
-		img[p + 1] = htobe16(g << scale);
-		img[p + 2] = htobe16(b << scale);
-		img[p + 3] = hasa ? htobe16((data[i] & mask) << scale ) : 0xFFFF;
+		img[p + 0] = htobe16(r * scale);
+		img[p + 1] = htobe16(g * scale);
+		img[p + 2] = htobe16(b * scale);
+		img[p + 3] = hasa ? htobe16((data[i] & mask) * scale) : 0xFFFF;
 	}
 
 	bwrite((unsigned char*) img, width * height * 8);
