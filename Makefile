@@ -12,7 +12,7 @@ BINS=ffshot
 all: $(BINS)
 
 ffshot: ffshot.c
-	$(CC) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) -o ffshot $^
+	$(CC) $(CPPFLAGS) $(CFLAGS) $^ $(LDFLAGS) -o ffshot
 
 install: $(BINS)
 	install -d $(DESTDIR)/$(PREFIX)/bin
