@@ -126,7 +126,6 @@ int main(int argc, char* argv[]) {
 	uint32_t i;
 	uint32_t mask = (2 << (bpc - 1)) - 1;
 	uint32_t scale = (1 << (16 - bpc)) + 1;
-	fprintf(stderr, "%d %d\n", bpc, bpp);
 	for (i=0; i < end; i++) {
 		// write out pixel
 		// BGRA? thanks Xorg.
