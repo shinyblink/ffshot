@@ -37,7 +37,6 @@ static xcb_connection_t* con;
 static xcb_screen_t* scr;
 static uint32_t win;
 
-static uint16_t pos_x, pos_y;
 static uint16_t width, height;
 static unsigned char buf[9];
 
@@ -77,14 +76,12 @@ int main(int argc, char* argv[]) {
 	if (!gr)
 		errx(1, "0x%08x: no such window", win);
 
-	pos_x = gr->x;
-	pos_y = gr->y;
 	width = gr->width;
 	height = gr->height;
 	free(gr);
 
 	// Get image from the X server. Yuck.
-	fprintf(stderr, "%08x: %ux%u to %ux%u\n", win, pos_x, pos_y, width, height);
+	fprintf(stderr, "%08x to %ux%u\n", win, width, height);
 	ic = xcb_get_image(con, XCB_IMAGE_FORMAT_Z_PIXMAP, win, 0, 0, width, height, ~0);
 	ir = xcb_get_image_reply(con, ic, NULL);
 	if (!ir)
