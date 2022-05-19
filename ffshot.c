@@ -117,7 +117,7 @@ int main(int argc, char* argv[]) {
 		img[p + 0] = htobe16(CD(2) * scale);                             // r
 		img[p + 1] = htobe16(CD(1) * scale);                             // g
 		img[p + 2] = htobe16(CD(0) * scale);                             // b
-		img[p + 3] = (ir->depth / 32) ? htobe16(CD(3) * scale) : 0xFFFF; // a
+		img[p + 3] = (ir->depth << 5) ? htobe16(CD(3) * scale) : 0xFFFF; // a
 	}
 
 	bwrite((unsigned char*) img, width * height * 8);
