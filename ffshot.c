@@ -108,15 +108,16 @@ int main(int argc, char* argv[]) {
 	uint32_t i;
 	uint32_t p;
 	uint32_t mask = (1 << bpc) - 1;
+	uint32_t scale = mask - 2;
 	for (i = 0; i < width * height; i++) {
 		// write out pixel
 		// BGRA? thanks Xorg.
 
 		p = i * 4;
-		img[p + 0] = htobe16(CD(2) * (mask + 2));                         // r
-		img[p + 1] = htobe16(CD(1) * (mask + 2));                         // g
-		img[p + 2] = htobe16(CD(0) * (mask + 2));                         // b
-		img[p + 3] = ir->depth / 32 ? htobe16(CD(3) * (mask+2)) : 0xFFFF; // a
+		img[p + 0] = htobe16(CD(2) * scale);                             // r
+		img[p + 1] = htobe16(CD(1) * scale);                             // g
+		img[p + 2] = htobe16(CD(0) * scale);                             // b
+		img[p + 3] = (ir->depth / 32) ? htobe16(CD(3) * scale) : 0xFFFF; // a
 	}
 
 	bwrite((unsigned char*) img, width * height * 8);
