@@ -4,11 +4,11 @@
 // Usage: ffshot | <farbfeld sink>
 // Made by vifino. ISC (C) vifino 2018
 
+#include <err.h>
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <inttypes.h>
 #include <xcb/xcb_image.h>
-#include <err.h>
 
 // I know, I know, not standardized.
 // But painless fallback.
@@ -33,64 +33,55 @@ static inline void bwrite(const unsigned char* buffer, size_t bytes) {
 	}
 }
 
-static xcb_connection_t* con;
-static xcb_screen_t* scr;
-static uint32_t win;
-
+static uint32_t wid;
 static uint16_t width, height;
 static unsigned char buf[9];
 
+static xcb_connection_t* con;
 static xcb_get_geometry_cookie_t gc;
 static xcb_get_geometry_reply_t* gr;
 static xcb_get_image_cookie_t ic;
 static xcb_get_image_reply_t* ir;
 
 int main(int argc, char* argv[]) {
-	if (!(argc == 1 || argc == 2)) { // one arg max
+	if (argc > 2) { // one arg max
 		printf("Usage: %s [wid]\n", argv[0]);
 		return 1;
 	}
-
-	if (argc == 2)
-		win = (uint32_t) strtoumax(argv[1], (char* *) NULL, 0);
 
 	con = xcb_connect(NULL, NULL);
 	if (xcb_connection_has_error(con))
 		errx(2, "Unable to connect to the X server");
 
-	scr = xcb_setup_roots_iterator(xcb_get_setup(con)).data;
-	if (!scr)
-		errx(2, "Unable to get screen data.");
+	if (argc == 2)
+		wid = (uint32_t) strtoumax(argv[1], (char* *) NULL, 0);
+	else
+		wid=xcb_setup_roots_iterator(xcb_get_setup(con)).data->root;
 
-	if (argc == 1)
-		win = scr->root;
-
-	if (!win) {
-		fprintf(stderr, "Invalid window number given.\n");
-		return 1;
-	}
+	if (!wid)
+		errx(1, "Invalid window number given.\n");
 
 	// Get window geometry.
-	gc = xcb_get_geometry(con, win);
+	gc = xcb_get_geometry(con, wid);
 	gr = xcb_get_geometry_reply(con, gc, NULL);
 	if (!gr)
-		errx(1, "0x%08x: no such window", win);
+		errx(1, "0x%08x: no such window", wid);
 
 	width = gr->width;
 	height = gr->height;
 	free(gr);
 
 	// Get image from the X server. Yuck.
-	fprintf(stderr, "%08x: %ux%u\n", win, width, height);
-	ic = xcb_get_image(con, XCB_IMAGE_FORMAT_Z_PIXMAP, win, 0, 0, width, height, ~0);
+	fprintf(stderr, "%08x: %ux%u\n", wid, width, height);
+	ic = xcb_get_image(con, XCB_IMAGE_FORMAT_Z_PIXMAP, wid, 0, 0, width, height, ~0);
 	ir = xcb_get_image_reply(con, ic, NULL);
 	if (!ir)
 		errx(2, "Failed to get Image");
 
+	uint32_t bpp = ir->depth;
 	uint32_t* data = (uint32_t*) xcb_get_image_data(ir);
 	if (!data)
 		errx(2, "Failed to get Image data");
-	uint32_t bpp = ir->depth;
 
 	unsigned int hasa = 1;
 	unsigned int bpc = 8;
@@ -120,7 +111,7 @@ int main(int argc, char* argv[]) {
 
 	size_t end = width * height;
 	uint16_t r, g, b, a;
-	uint32_t i;
+	uint32_t i, p;
 	uint32_t mask = (2 << (bpc - 1)) - 1;
 	uint32_t scale = (1 << (16 - bpc)) + 1;
 	for (i=0; i < end; i++) {
@@ -131,7 +122,7 @@ int main(int argc, char* argv[]) {
 		r = (data[i] >> (2*bpc)) & mask;
 		a = (data[i] >> (3*bpc)) & mask;
 
-		uint32_t p = i * 4;
+		p = i * 4;
 		img[p + 0] = htobe16(r * scale);
 		img[p + 1] = htobe16(g * scale);
 		img[p + 2] = htobe16(b * scale);
@@ -142,7 +133,6 @@ int main(int argc, char* argv[]) {
 
 	free(img);
 	free(ir);
-
 	xcb_disconnect(con);
 	return 0;
 }
