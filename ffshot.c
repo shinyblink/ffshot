@@ -72,7 +72,6 @@ int main(int argc, char* argv[]) {
 	free(gr);
 
 	// Get image from the X server. Yuck.
-	fprintf(stderr, "%08x: %ux%u\n", wid, width, height);
 	ic = xcb_get_image(con, XCB_IMAGE_FORMAT_Z_PIXMAP, wid, 0, 0, width, height, ~0);
 	ir = xcb_get_image_reply(con, ic, NULL);
 	if (!ir)
@@ -97,6 +96,8 @@ int main(int argc, char* argv[]) {
 	default:
 		errx(2, "No support for bit depths other than 24/30/32 bit: bit depth %i. Fix me?", bpp);
 	}
+	
+	fprintf(stderr, "%08x: %ux%u @ %ubpp\n", wid, width, height, bpp);
 
 	// allocate buffer.
 	uint16_t* img = malloc(width * height * 8);
